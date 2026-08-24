@@ -6,6 +6,31 @@ class AuthService {
   static const _tokenKey = "auth_token";
   static const _nameKey = "customer_name";
 
+  Future<void> signup({required String fullName, required String email, required String password}) async {
+    final client = ApiClient();
+    final result = await client.post(
+      "/auth/signup",
+      {
+        "fullName": fullName.trim(),
+        "email": email.trim().toLowerCase(),
+        "password": password,
+      },
+      includeAuth: false,
+    );
+
+    final token = result["token"]?.toString() ?? "";
+    final customer = (result["customer"] as Map<String, dynamic>? ?? <String, dynamic>{});
+    final savedName = customer["fullName"]?.toString() ?? fullName.trim();
+
+    if (token.isEmpty) {
+      throw Exception("Token missing in signup response");
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+    await prefs.setString(_nameKey, savedName);
+  }
+
   Future<void> login({required String email, required String password}) async {
     final client = ApiClient();
     final result = await client.post(

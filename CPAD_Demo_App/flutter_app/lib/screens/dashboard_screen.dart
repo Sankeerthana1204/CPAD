@@ -74,7 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final service = ProductService(_token);
-      final products = await service.fetchProducts(search: _searchController.text);
+      final products = await service.fetchProducts(search: _searchController.text.trim());
 
       if (!mounted) {
         return;
@@ -90,6 +90,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _error = e.toString().replaceFirst("Exception: ", "");
       });
     }
+  }
+
+  Future<void> _clearSearch() async {
+    _searchController.clear();
+    await _search();
   }
 
   Future<void> _logout() async {
@@ -126,11 +131,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: "Search products",
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              onPressed: _isLoading ? null : _clearSearch,
+                              icon: const Icon(Icons.clear),
+                              tooltip: "Clear search",
+                            )
+                          : null,
                     ),
                     onSubmitted: (_) => _search(),
+                    onChanged: (_) {
+                      setState(() {});
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -155,26 +170,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _products.isEmpty
                       ? const Center(child: Text("No products found"))
-                      : ListView.separated(
-                          itemBuilder: (context, index) {
-                            final item = _products[index];
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              leading: CircleAvatar(child: Text(item.name.isNotEmpty ? item.name[0].toUpperCase() : "P")),
-                              title: Text(item.name),
-                              subtitle: Text("Rs ${item.price.toStringAsFixed(2)} | Stock: ${item.stockQty}"),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => ProductDetailScreen(token: _token, productId: item.productId),
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            final width = constraints.maxWidth;
+                            final crossAxisCount = width >= 1100 ? 3 : width >= 700 ? 2 : 1;
+                            return GridView.builder(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: crossAxisCount == 1 ? 2.4 : 1.05,
+                              ),
+                              itemCount: _products.length,
+                              itemBuilder: (context, index) {
+                                final item = _products[index];
+                                return Card(
+                                  clipBehavior: Clip.antiAlias,
+                                  elevation: 2,
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ProductDetailScreen(token: _token, productId: item.productId),
+                                        ),
+                                      );
+                                    },
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Expanded(
+                                          flex: 6,
+                                          child: item.imageUrl.isNotEmpty
+                                              ? Image.network(
+                                                  item.imageUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => Container(
+                                                    color: Colors.grey.shade200,
+                                                    child: const Center(child: Icon(Icons.image_not_supported_outlined)),
+                                                  ),
+                                                )
+                                              : Container(
+                                                  color: Colors.grey.shade200,
+                                                  child: const Center(child: Icon(Icons.inventory_2_outlined)),
+                                                ),
+                                        ),
+                                        Expanded(
+                                          flex: 5,
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  item.description.isEmpty ? "No description available" : item.description,
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(color: Colors.grey.shade700),
+                                                ),
+                                                const Spacer(),
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      "Rs ${item.price.toStringAsFixed(2)}",
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.indigo,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      "Stock: ${item.stockQty}",
+                                                      style: TextStyle(color: Colors.grey.shade700),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
                             );
                           },
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemCount: _products.length,
                         ),
             ),
           ],

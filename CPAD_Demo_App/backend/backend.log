@@ -1,0 +1,6 @@
+
+> cpad-ecommerce-backend@1.0.0 start
+> node src/server.js
+
+Backend running at http://localhost:4000
+Demo credentials: customer@demo.com / demo123

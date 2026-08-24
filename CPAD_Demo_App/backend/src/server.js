@@ -19,6 +19,34 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const PRODUCT_IMAGE_BY_NAME = {
+  "Cotton T-Shirt": "https://loremflickr.com/600/400/tshirt?lock=101",
+  "Denim Jeans": "https://loremflickr.com/600/400/jeans?lock=102",
+  "Sports Shoes": "https://loremflickr.com/600/400/runningshoes?lock=103",
+  "Leather Wallet": "https://loremflickr.com/600/400/wallet?lock=104",
+  "Analog Watch": "https://loremflickr.com/600/400/watch?lock=105",
+  "Backpack": "https://loremflickr.com/600/400/backpack?lock=106",
+  "Sunglasses": "https://loremflickr.com/600/400/sunglasses?lock=107",
+  "Wireless Earbuds": "https://loremflickr.com/600/400/earbuds?lock=108",
+  "Ceramic Mug": "https://loremflickr.com/600/400/coffeemug?lock=109",
+  "Notebook": "https://loremflickr.com/600/400/notebook?lock=110"
+};
+
+function productImageUrl(name) {
+  const mappedUrl = PRODUCT_IMAGE_BY_NAME[name];
+  if (mappedUrl) {
+    return mappedUrl;
+  }
+
+  const keyword = name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .replace(/\s+/g, ",");
+
+  return `https://loremflickr.com/600/400/${keyword}?lock=999`;
+}
+
 async function initDb() {
   await run(`
     CREATE TABLE IF NOT EXISTS customers (
@@ -96,6 +124,24 @@ async function initDb() {
       );
     }
   }
+
+  // Backfill products seeded with generic/random/placeholder image URLs.
+  const existingProducts = await all(`SELECT product_id, name, image_url FROM products`);
+  for (const item of existingProducts) {
+    const currentUrl = (item.image_url || "").toString();
+    const needsBackfill =
+      currentUrl.length === 0 ||
+      currentUrl.includes("picsum.photos") ||
+      currentUrl.includes("dummyimage.com");
+    if (!needsBackfill) {
+      continue;
+    }
+
+    await run(
+      `UPDATE products SET image_url = ?, updated_at = ? WHERE product_id = ?`,
+      [productImageUrl(item.name), nowIso(), item.product_id]
+    );
+  }
 }
 
 function authMiddleware(req, res, next) {
@@ -117,6 +163,73 @@ function authMiddleware(req, res, next) {
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "cpad-ecommerce-backend" });
+});
+
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const { fullName, email, password } = req.body;
+
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ message: "Full name, email and password are required" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const cleanName = fullName.toString().trim();
+
+    if (cleanName.length < 2) {
+      return res.status(400).json({ message: "Full name must be at least 2 characters" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const existingCustomer = await get(
+      `SELECT customer_id FROM customers WHERE email = ?`,
+      [normalizedEmail]
+    );
+
+    if (existingCustomer) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const createdAt = nowIso();
+
+    const result = await run(
+      `
+      INSERT INTO customers (full_name, email, password_hash, status, created_at)
+      VALUES (?, ?, ?, 'ACTIVE', ?)
+      `,
+      [cleanName, normalizedEmail, passwordHash, createdAt]
+    );
+
+    const customerId = result.id;
+    const tokenPayload = {
+      customerId,
+      email: normalizedEmail,
+      fullName: cleanName,
+    };
+
+    const token = jwt.sign(tokenPayload, jwtSecret, { expiresIn: "2h" });
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
+    await run(
+      `INSERT INTO login_sessions (customer_id, issued_at, expires_at, is_revoked) VALUES (?, ?, ?, 0)`,
+      [customerId, createdAt, expiresAt]
+    );
+
+    return res.status(201).json({
+      token,
+      customer: {
+        customerId,
+        fullName: cleanName,
+        email: normalizedEmail,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Unexpected error", detail: err.message });
+  }
 });
 
 app.post("/api/auth/login", async (req, res) => {
