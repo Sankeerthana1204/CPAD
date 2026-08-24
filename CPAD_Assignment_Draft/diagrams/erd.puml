@@ -1,0 +1,53 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+title ER Diagram - E-Commerce App (Scoped)
+
+entity "Customer" as customer {
+  * customer_id : BIGINT <<PK>>
+  --
+  * full_name : VARCHAR(120)
+  * email : VARCHAR(150) <<UNIQUE>>
+  * password_hash : VARCHAR(255)
+  * status : VARCHAR(20)
+  * created_at : DATETIME
+  * last_login_at : DATETIME
+}
+
+entity "Product" as product {
+  * product_id : BIGINT <<PK>>
+  --
+  * name : VARCHAR(150)
+  description : TEXT
+  * price : DECIMAL(10,2)
+  image_url : VARCHAR(255)
+  * stock_qty : INT
+  * is_active : BOOLEAN
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+entity "LoginSession" as session {
+  * session_id : BIGINT <<PK>>
+  --
+  * customer_id : BIGINT <<FK>>
+  * issued_at : DATETIME
+  * expires_at : DATETIME
+  * is_revoked : BOOLEAN
+}
+
+customer ||--o{ session : has
+
+note bottom of customer
+Constraint: email must be unique
+Constraint: customer active for login
+end note
+
+note bottom of product
+Constraint: price >= 0
+Constraint: stock_qty >= 0
+Constraint: only active products visible
+end note
+
+@enduml

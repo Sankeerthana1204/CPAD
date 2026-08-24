@@ -1,0 +1,74 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title Logical Architecture - E-Commerce App (Scoped)
+
+package "Presentation Layer\n(Flutter Web + Mobile)" as presentation {
+  class LoginPage
+  class DashboardPage
+  class ProductDetailPage
+  class AuthViewModel
+  class CatalogViewModel
+}
+
+package "Application Layer\n(Use Case Services)" as application {
+  interface AuthApplicationService
+  interface CatalogApplicationService
+  class LoginCustomerUseCase
+  class SearchProductsUseCase
+  class ViewProductDetailsUseCase
+}
+
+package "Domain Layer\n(Business Model)" as domain {
+  class Customer
+  class Product
+  interface CustomerRepository
+  interface ProductRepository
+}
+
+package "Infrastructure Layer\n(Adapters + Technical Services)" as infra {
+  class CustomerRepositoryImpl
+  class ProductRepositoryImpl
+  class PasswordHasher
+  class TokenProvider
+}
+
+package "Data Layer\n(SQL Database)" as data {
+  database AppDB
+}
+
+presentation ..> application : invokes
+application ..> domain : orchestrates
+application ..> domain : uses repository interfaces
+infra ..|> domain.CustomerRepository
+infra ..|> domain.ProductRepository
+infra ..> data : SQL read/write
+
+note right of presentation
+Responsibilities:
+- Screen rendering
+- User input and validation
+- Navigation and UI state
+end note
+
+note right of application
+Responsibilities:
+- Use-case orchestration
+- API request handling
+- Application-level validation
+end note
+
+note right of domain
+Responsibilities:
+- Business entities and rules
+- Framework-independent core logic
+end note
+
+note right of infra
+Responsibilities:
+- Repository implementations
+- Security/technical services
+end note
+
+@enduml
