@@ -15,6 +15,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final _authService = AuthService();
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
 
   bool _isLoading = true;
   String _customerName = "Customer";
@@ -110,6 +111,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -131,6 +139,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       labelText: "Search products",
                       border: const OutlineInputBorder(),
@@ -146,6 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onChanged: (_) {
                       setState(() {});
                     },
+                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -174,50 +186,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           builder: (context, constraints) {
                             final width = constraints.maxWidth;
                             final crossAxisCount = width >= 1100 ? 3 : width >= 700 ? 2 : 1;
-                            return GridView.builder(
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: crossAxisCount == 1 ? 2.4 : 1.05,
-                              ),
-                              itemCount: _products.length,
-                              itemBuilder: (context, index) {
-                                final item = _products[index];
-                                return Card(
-                                  clipBehavior: Clip.antiAlias,
-                                  elevation: 2,
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => ProductDetailScreen(token: _token, productId: item.productId),
-                                        ),
-                                      );
-                                    },
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Expanded(
-                                          flex: 6,
-                                          child: item.imageUrl.isNotEmpty
-                                              ? Image.network(
-                                                  item.imageUrl,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) => Container(
-                                                    color: Colors.grey.shade200,
-                                                    child: const Center(child: Icon(Icons.image_not_supported_outlined)),
-                                                  ),
-                                                )
-                                              : Container(
+
+                            Widget buildProductCard(Product item) {
+                              return Card(
+                                clipBehavior: Clip.antiAlias,
+                                elevation: 2,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ProductDetailScreen(token: _token, productId: item.productId),
+                                      ),
+                                    );
+                                  },
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        flex: 6,
+                                        child: item.imageUrl.isNotEmpty
+                                            ? Image.network(
+                                                item.imageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => Container(
                                                   color: Colors.grey.shade200,
-                                                  child: const Center(child: Icon(Icons.inventory_2_outlined)),
+                                                  child: const Center(child: Icon(Icons.image_not_supported_outlined)),
                                                 ),
-                                        ),
-                                        Expanded(
-                                          flex: 5,
-                                          child: Padding(
-                                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                              )
+                                            : Container(
+                                                color: Colors.grey.shade200,
+                                                child: const Center(child: Icon(Icons.inventory_2_outlined)),
+                                              ),
+                                      ),
+                                      Expanded(
+                                        flex: 5,
+                                        child: Padding(
+                                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                          child: SingleChildScrollView(
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
@@ -234,7 +239,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                   overflow: TextOverflow.ellipsis,
                                                   style: TextStyle(color: Colors.grey.shade700),
                                                 ),
-                                                const Spacer(),
+                                                const SizedBox(height: 8),
                                                 Row(
                                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
@@ -255,10 +260,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                );
+                                ),
+                              );
+                            }
+
+                            if (crossAxisCount == 1) {
+                              return ListView.separated(
+                                itemCount: _products.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final item = _products[index];
+                                  return SizedBox(
+                                    height: 280,
+                                    child: buildProductCard(item),
+                                  );
+                                },
+                              );
+                            }
+
+                            final childAspectRatio = crossAxisCount == 2 ? 0.9 : 1.05;
+                            return GridView.builder(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: childAspectRatio,
+                              ),
+                              itemCount: _products.length,
+                              itemBuilder: (context, index) {
+                                final item = _products[index];
+                                return buildProductCard(item);
                               },
                             );
                           },
