@@ -157,7 +157,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onChanged: (_) {
                       setState(() {});
                     },
-                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
                   ),
                 ),
                 const SizedBox(width: 10),

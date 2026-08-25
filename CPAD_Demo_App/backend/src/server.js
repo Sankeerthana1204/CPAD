@@ -162,7 +162,7 @@ function authMiddleware(req, res, next) {
 }
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", service: "cpad-ecommerce-backend" });
+  res.json({ status: "ok", service: "namma kadai.com" });
 });
 
 app.post("/api/auth/signup", async (req, res) => {
