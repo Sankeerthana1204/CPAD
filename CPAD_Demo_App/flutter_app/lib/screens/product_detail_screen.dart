@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 
 import "../models/product.dart";
 import "../services/product_service.dart";
+import "../utils/product_images.dart";
 
 class ProductDetailScreen extends StatefulWidget {
   final String token;
@@ -21,19 +22,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isLoading = true;
   String? _error;
   Product? _product;
-
-  String _detailImageUrl(String url) {
-    if (url.contains("dummyimage.com/600x400")) {
-      return url.replaceFirst("dummyimage.com/600x400", "dummyimage.com/420x280");
-    }
-    if (url.contains("picsum.photos/") && url.contains("/600/400")) {
-      return url.replaceFirst("/600/400", "/420/280");
-    }
-    if (url.contains("loremflickr.com/600/400")) {
-      return url.replaceFirst("loremflickr.com/600/400", "loremflickr.com/420/280");
-    }
-    return url;
-  }
 
   @override
   void initState() {
@@ -67,6 +55,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final detailAssetPath = _product == null ? "assets/notebook.jpg" : ProductImages.forProduct(_product!);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 1000;
+    final contentMaxWidth = isLargeScreen ? 920.0 : 720.0;
+    final imageHeight = isLargeScreen ? 380.0 : 220.0;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Product Details")),
       body: _isLoading
@@ -77,42 +71,43 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ? const Center(child: Text("Product not found"))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: SizedBox(
-                              height: 220,
-                              child: Image.network(
-                                _detailImageUrl(_product!.imageUrl),
-                                fit: BoxFit.cover,
-                                filterQuality: FilterQuality.low,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.grey.shade200,
-                                  child: const Center(child: Icon(Icons.image_not_supported)),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: SizedBox(
+                                  height: imageHeight,
+                                  child: Image.asset(
+                                    detailAssetPath,
+                                    fit: BoxFit.cover,
+                                    filterQuality: FilterQuality.low,
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _product!.name,
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Rs ${_product!.price.toStringAsFixed(2)}",
+                                style: const TextStyle(fontSize: 20, color: Colors.indigo, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Stock available: ${_product!.stockQty}"),
+                              const SizedBox(height: 16),
+                              Text(
+                                _product!.description.isEmpty ? "No description available" : _product!.description,
+                                style: const TextStyle(fontSize: 16, height: 1.4),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _product!.name,
-                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Rs ${_product!.price.toStringAsFixed(2)}",
-                            style: const TextStyle(fontSize: 20, color: Colors.indigo, fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 10),
-                          Text("Stock available: ${_product!.stockQty}"),
-                          const SizedBox(height: 16),
-                          Text(
-                            _product!.description.isEmpty ? "No description available" : _product!.description,
-                            style: const TextStyle(fontSize: 16, height: 1.4),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
     );

@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "../models/product.dart";
 import "../services/auth_service.dart";
 import "../services/product_service.dart";
+import "../utils/product_images.dart";
 import "product_detail_screen.dart";
 
 class DashboardScreen extends StatefulWidget {
@@ -121,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Dashboard - $_customerName"),
+        title: Text("Pick your products"),
         actions: [
           IconButton(
             onPressed: _logout,
@@ -187,6 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             final crossAxisCount = width >= 1100 ? 3 : width >= 700 ? 2 : 1;
 
                             Widget buildProductCard(Product item) {
+                              final assetPath = ProductImages.forProduct(item);
                               return Card(
                                 clipBehavior: Clip.antiAlias,
                                 elevation: 2,
@@ -203,19 +205,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     children: [
                                       Expanded(
                                         flex: 6,
-                                        child: item.imageUrl.isNotEmpty
-                                            ? Image.network(
-                                                item.imageUrl,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Container(
-                                                  color: Colors.grey.shade200,
-                                                  child: const Center(child: Icon(Icons.image_not_supported_outlined)),
-                                                ),
-                                              )
-                                            : Container(
-                                                color: Colors.grey.shade200,
-                                                child: const Center(child: Icon(Icons.inventory_2_outlined)),
-                                              ),
+                                        child: Image.asset(
+                                          assetPath,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                       Expanded(
                                         flex: 5,

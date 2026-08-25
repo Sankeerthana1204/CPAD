@@ -101,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _isSignupMode ? "Create Account" : "E-Commerce Login",
+                        _isSignupMode ? "Create Account" : "Namma Kadai Login",
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
